@@ -58,6 +58,11 @@ namespace VCTR
              * @returns The output of the PID controller.
              */
             float update(float state, int64_t stateTime);
+
+            /**
+             * @brief resets the controllers state. Removing any integral windup.
+             */
+            void reset();
         };
 
     }

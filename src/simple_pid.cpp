@@ -57,3 +57,7 @@ float SimplePID::update(float state, int64_t stateTime) {
     return output;
 
 }
+
+void SimplePID::reset() {
+    integral_ = 0;
+}
