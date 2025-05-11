@@ -253,9 +253,17 @@ namespace VCTR
             Math::Vector<float, 3> attCtrlOutput;
             {
 
+                /*auto quatOut = wantedAttitude.normalize() * attitude.conjugate();
+                attCtrlOutput = {quatOut(1), quatOut(2), quatOut(3)}; // Get the quaternion output
+                attCtrlOutput = attitude.rotate(attCtrlOutput); // Rotate the quaternion output to body frame
+                
+                attCtrlOutput(0) = -asin(quatOut(2)) * attitudeGain_; // Map to vector and linearize output using asin
+                attCtrlOutput(1) = asin(quatOut(1)) * attitudeGain_;
+                attCtrlOutput(2) = asin(quatOut(3)) * attitudeZGain_;*/
+
                 auto quatOut = wantedAttitude * attitude.conjugate(); //Calculate the quaternion rotation error
                 
-                attCtrlOutput(0) = asin(quatOut(1)) * attitudeGain_;
+                attCtrlOutput(0) = asin(quatOut(1)) * attitudeGain_; // Map to vector and linearize output using asin
                 attCtrlOutput(1) = asin(quatOut(2)) * attitudeGain_;
                 attCtrlOutput(2) = asin(quatOut(3)) * attitudeZGain_;
 
@@ -276,11 +284,12 @@ namespace VCTR
             });
 
             attCtrlOutput = attCtrlOutput + attRateCtrlOutput; //Add the attitude rate controller output to the attitude controller output.
-
+ 
 
             //################### Calculate the TVC output ################
             //Current implementation does not take care of limits
-            Math::Vector_F forceVector = attCtrlOutput.cross(Math::Vector<float, 3>({0, 0, 1/tvcCGOffset_m_}));
+            auto forceVector = attCtrlOutput.cross(Math::Vector<float, 3>({0, 0, 1/tvcCGOffset_m_}));
+            //auto bodyZAxis = attitude.rotate(Math::Vector<float, 3>({0, 0, 1})); //Get the Z-axis in body frame
             forceVector = forceVector + wantedBodyForce.getProjectionOn(Math::Vector<float, 3>({0, 0, 1}));
 
             //LOG_MSG("Force vector: %.2f %.2f %.2f |%.2f|\n", forceVector(0), forceVector(1), forceVector(2), forceVector.magnitude()); // Print the force vector to the console
@@ -291,7 +300,7 @@ namespace VCTR
             });
 
             if (!enableControl_) {
-                tvcOutput = Math::Vector<float, 4>({0, 0, 0.1, 0}); //FOR TESTING ONLY
+                tvcOutput = Math::Vector<float, 4>({0, 0, 0.1, 0}); //If the control is disabled, we send a tiny force in z axis to keep actuators alive, but pointing straight up.
             }
 
             tvcTopic_.publish(tvcOutput); //Publish the TVC output
