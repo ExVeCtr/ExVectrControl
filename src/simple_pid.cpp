@@ -9,16 +9,20 @@ using namespace VCTR::CTRL;
 
 // Implementation of the SimplePID class.
 
-SimplePID::SimplePID(float kp, float ki, float kd, float maxOutput) :
-    kp_(kp),
-    ki_(ki),
-    kd_(kd),
-    maxOutput_(maxOutput),
-    integral_(0.0f),
-    lastError_(0.0f),
-    setPoint_(0.0f),
-    lastTime_(0) {
+SimplePID::SimplePID(float kp, float ki, float kd, float maxOutput) 
+{
+    kp_ = kp;
+    ki_ = ki;
+    kd_ = kd;
 
+    maxOutput_ = maxOutput;
+
+    integral_ = 0;
+    lastError_ = 0;
+
+    setPoint_ = 0;
+
+    lastTime_ = Core::NOW();   
 }
 
 void SimplePID::setSetPoint(float setPoint) {
