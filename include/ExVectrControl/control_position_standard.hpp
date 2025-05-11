@@ -16,7 +16,8 @@ namespace VCTR
     {
 
         /**
-         * @brief Simple one dimensional PID controller.
+         * @brief   A generalized position control system for a 3D vehicle. This take position and velocity setpoints and outputs an acceleration vector in the reference frame.
+         *          This output usually is mapped/transformed to get attitude and thrust controls. E,g ControlMappingPosToDrone that is used for drones, tail sitter and other similar underactuated vehicles.
          */
         class ControlPositionStandard : public Core::Task_Periodic
         {
