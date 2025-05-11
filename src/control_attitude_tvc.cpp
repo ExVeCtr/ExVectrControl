@@ -73,6 +73,7 @@ namespace VCTR
             }
 
             lastRunTimestamp_ = Core::NOW();
+            accelSetpoint_ = 0;
 
         }
 
@@ -120,7 +121,7 @@ namespace VCTR
             } else {
                 //Propagate the setpoint if no new data is available
                 Math::Quat<float> att = stateSetpoint_.block<4, 1>(3, 0); //Get the wanted attitude from the setpoint
-                Math::Vector<float, 3> vel = stateSetpoint_.block<3, 1>(0, 0); //Get the wanted velocity from the setpoint
+                //Math::Vector<float, 3> vel = stateSetpoint_.block<3, 1>(0, 0); //Get the wanted velocity from the setpoint
                 att = att * Math::Quat<float>(angularVelocity.normalize(), angularVelocity.magnitude() * dTime); //Propagate the attitude quaternion
                 stateSetpoint_(3) = att(0);
                 stateSetpoint_(4) = att(1);
