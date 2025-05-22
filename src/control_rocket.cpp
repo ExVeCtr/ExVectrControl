@@ -72,7 +72,7 @@ namespace VCTR
 
             //Only run when all subscribers have gotten data at least once
             if (!attSubr_.isDataNew() || !posSubr_.isDataNew() || !stateSetpointSubr_.isDataNew()) {
-                setInitialised(false);
+                //setInitialised(false);
             }
 
             lastRunTimestamp_ = Core::NOW();
@@ -167,6 +167,7 @@ namespace VCTR
                 (posCtrlOutput(1) - velocity(1)),
                 (posCtrlOutput(2) - velocity(2))
             });
+            //velCtrlError = 0;
             Math::Vector<float, 3> velCtrlOutput({
                 velocityHZTGain_ * velCtrlError(0),
                 velocityHZTGain_ * velCtrlError(1),
@@ -246,9 +247,9 @@ namespace VCTR
             //LOG_MSG("Wanted force magnitude: %.2f\n", wantedForceMagnitude);
 
             //auto wantedForce = velCtrlOutput.magnitude() * vehicleMass_kg_;
-            auto cosLosses = cos(tiltOffAngle); //Cosine losses due to the wanted tilt angle possibly not being reached.
-            if (cosLosses < 0) cosLosses = 0; //If the tilt angle is over 90 degrees, we don't want to apply any force, othewise we technically would need a negative force.
-            wantedForceMagnitude = wantedForceMagnitude / cosLosses; //Apply the cosine losses to the wanted force.
+            //auto cosLosses = cos(tiltOffAngle); //Cosine losses due to the wanted tilt angle possibly not being reached.
+            //if (cosLosses < 0) cosLosses = 0; //If the tilt angle is over 90 degrees, we don't want to apply any force, othewise we technically would need a negative force.
+            //wantedForceMagnitude = wantedForceMagnitude / cosLosses; //Apply the cosine losses to the wanted force.
 
             //Now we calculate the wanted attitude to achieve the wanted acceleration vector direction.
             Math::Quat_F wantedAttitude;
@@ -267,6 +268,7 @@ namespace VCTR
             //LOG_MSG("Attitude: %.2f %.2f %.2f %.2f\n", wantedAttitude(0), wantedAttitude(1), wantedAttitude(2), wantedAttitude(3));
             //FOR TESTING!!!! FORCES UPRIGHT POSITION
             //wantedAttitude = Math::Quat_F(1, 0, 0, 0);
+            //attitude = Math::Quat<float>(Math::Vector<float, 3>({1, 0, 0}), 90*3.14/180); //Set the attitude to the Z-axis
             
 
             //################### Calculate the attitude controller output ################
@@ -305,13 +307,34 @@ namespace VCTR
             });
 
             attCtrlOutput = attCtrlOutput + attRateCtrlOutput; //Add the attitude rate controller output to the attitude controller output.
+
+            //LOG_MSG("Attitude controller output: %.2f %.2f %.2f\n", attCtrlOutput(0), attCtrlOutput(1), attCtrlOutput(2)); // Print the attitude controller output to the console
  
 
             //################### Calculate the TVC output ################
-            //Current implementation does not take care of limits
-            auto forceVector = attCtrlOutput.cross(Math::Vector<float, 3>({0, 0, 1/tvcCGOffset_m_}));
+            Math::Vector<float, 3> torqueVec = attCtrlOutput.cross(Math::Vector<float, 3>({0, 0, 1/tvcCGOffset_m_}));
             //auto bodyZAxis = attitude.rotate(Math::Vector<float, 3>({0, 0, 1})); //Get the Z-axis in body frame
-            forceVector = forceVector + wantedBodyForce.getProjectionOn(Math::Vector<float, 3>({0, 0, 1}));
+            float bodyForceMagnitude = wantedBodyForce.magnitude();
+            float cosLosses = cos(wantedBodyForce.getAngleTo(Math::Vector<float, 3>({0, 0, 1}))); //Cosine losses due to the wanted tilt angle possibly not being reached.
+            if (cosLosses < 0) cosLosses = 0; //If the tilt angle is over 90 degrees, we don't want to apply any force, othewise we technically would need a negative force.
+            Math::Vector<float, 3> forceVector = torqueVec;
+            forceVector(2) += bodyForceMagnitude * cosLosses; //Add the force vector to the Z-axis. The Z-axis is the thrust vector in body frame.
+
+            // We now must take the TVC angle limit into account. 
+            // If the requested vector angle is over the limit, we use the closest possible and then we scale the output until the requested torque is reached.
+            auto tvcAngle = forceVector.getAngleTo(Math::Vector<float, 3>({0, 0, 1})); //Get the angle of the force vector to the Z-axis
+            auto tvcRotationAxis = (forceVector.cross(Math::Vector<float, 3>({0, 0, 1}))).normalize(); //Rotation axis is the cross product of the vector and the Z-Axis.
+            if (tvcAngle > tvcAngleLimit_Rad_) {
+                auto tvcRotation = Math::Quat_F(-tvcRotationAxis, tvcAngle - tvcAngleLimit_Rad_);//.conjugate();
+                auto forceVectorNew = tvcRotation.rotate(forceVector); //Rotate the vector back to the limit.
+                //Now we must scale it so the resulting torque is the same as the requested torque. The torque is the cross product of the force vector and the distance to the CG.
+                //auto forceMagnitude = forceVector.magnitude();
+                auto xyMag = sqrt(forceVector(0)*forceVector(0) + forceVector(1)*forceVector(1)); //Calculate the XY magnitude of the vector
+                auto xyMagNew = sqrt(forceVectorNew(0)*forceVectorNew(0) + forceVectorNew(1)*forceVectorNew(1)); //Calculate the XY magnitude of the new vector
+                auto correctionFactor = xyMag / xyMagNew; //Calculate the correction factor to scale the vector back to the limit.
+                forceVectorNew = forceVectorNew * correctionFactor; //Scale the vector back to the limit.
+                forceVector = forceVectorNew;
+            }    
 
             //LOG_MSG("Force vector: %.2f %.2f %.2f |%.2f|\n", forceVector(0), forceVector(1), forceVector(2), forceVector.magnitude()); // Print the force vector to the console
 

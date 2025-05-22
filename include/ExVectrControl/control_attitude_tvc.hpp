@@ -1,12 +1,11 @@
-#ifndef EXVECTRCONTROL_CONTROLROCKET_HPP
-#define EXVECTRCONTROL_CONTROLROCKET_HPP
+#ifndef EXVECTRCONTROL_CONTROLATTITUDETVC_HPP
+#define EXVECTRCONTROL_CONTROLATTITUDETVC_HPP
 
 #include "ExVectrCore/topic_subscribers.hpp"
 #include "ExVectrCore/timestamped.hpp"
 #include "ExVectrCore/task_types.hpp"
 
-#include "ExVectrMath/matrix_vector.hpp"
-#include "ExVectrMath/matrix_quaternion.hpp"
+#include "ExVectrMath.hpp"
 
 #include "ExVectrDSP/value_covariance.hpp"
 
@@ -50,12 +49,14 @@ namespace VCTR
             float tvcAngleLimit_Rad_ = 1; // Maximum angle in radians.
             float tvcCGOffset_m_ = -0.35; // Center of gravity offset in meters. This is the distance from the CG of the vehicle to the center of the thrust vector control system.
 
-            float tiltLimit_Rad_ = 35 * 3.14/180; // Tilt limit in radians. Limits the maximum tilt angle from the Z-Axis of the vehicle for correcting velocity.
+            float tiltLimit_Rad_ = 35 * DEGREES; // Tilt limit in radians. Limits the maximum tilt angle from the Z-Axis of the vehicle for correcting velocity.
 
             float attitudeGain_ = 2; // Attitude control gain.
             float attitudeZGain_ = 0.8; // Attitude control gain.
             float attitudeRateGain_ = 0.2; // Attitude rate control gain.
             float attitudeRateZGain_ = 0.1; // Attitude rate control gain.
+
+            bool compensateTVCAngle_ = false; //If true, then if a TVC angle greater than the limit is needed, then the TVC thrust is increased to achieve the desired torque.
 
 
             // Runtime data
@@ -105,7 +106,12 @@ namespace VCTR
 
 
             void enableControl(bool enable) { enableControl_ = enable; }
-            
+
+            /**
+             * @brief if a TVC angle greater than the limit is needed, then the TVC thrust is increased to achieve the desired torque.
+             * @note this can cause runwaway if the required TVC angle is constantly greater than the limit.
+             */
+            void setTVCLimitCompensation(bool enable) { compensateTVCAngle_ = enable; }
             
             void taskCheck() override;
 

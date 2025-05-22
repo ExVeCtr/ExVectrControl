@@ -20,7 +20,7 @@ namespace VCTR
 
         
         ControlPositionStandard::ControlPositionStandard() :
-            Core::Task_Periodic("Control Rocket", 50*Core::MILLISECONDS)
+            Core::Task_Periodic("Control Rocket", 20*Core::MILLISECONDS)
         {
 
             // attach to scheduler
@@ -170,7 +170,28 @@ namespace VCTR
                 velCtrlIntegral_(2) = 0;
             }
 
-            //
+            //limit the output of the velocity controller including the integral. If we are over the limit, with the P and I term, then we subtract from the integral term so we reach the limit. But do not go over zero for the integral term.
+            if (velCtrlOutput(0) + velCtrlIntegral_(0) > velocityHZTLimit_mss_) {
+                velCtrlIntegral_(0) = velocityHZTLimit_mss_ - velCtrlOutput(0);
+                if (velCtrlIntegral_(0) < 0) velCtrlIntegral_(0) = 0; //Don't let the integral term go negative
+            } else if (velCtrlOutput(0) + velCtrlIntegral_(0) < -velocityHZTLimit_mss_) {
+                velCtrlIntegral_(0) = -velocityHZTLimit_mss_ - velCtrlOutput(0);
+                if (velCtrlIntegral_(0) > 0) velCtrlIntegral_(0) = 0; 
+            }
+            if (velCtrlOutput(1) + velCtrlIntegral_(1) > velocityHZTLimit_mss_) {
+                velCtrlIntegral_(1) = velocityHZTLimit_mss_ - velCtrlOutput(1);
+                if (velCtrlIntegral_(1) < 0) velCtrlIntegral_(1) = 0; //Don't let the integral term go negative
+            } else if (velCtrlOutput(1) + velCtrlIntegral_(1) < -velocityHZTLimit_mss_) {
+                velCtrlIntegral_(1) = -velocityHZTLimit_mss_ - velCtrlOutput(1);
+                if (velCtrlIntegral_(1) > 0) velCtrlIntegral_(1) = 0; 
+            }
+            if (velCtrlOutput(2) + velCtrlIntegral_(2) > velocityVRTLimit_mss_) {
+                velCtrlIntegral_(2) = velocityVRTLimit_mss_ - velCtrlOutput(2);
+                if (velCtrlIntegral_(2) < 0) velCtrlIntegral_(2) = 0; //Don't let the integral term go negative
+            } else if (velCtrlOutput(2) + velCtrlIntegral_(2) < -velocityVRTLimit_mss_) {
+                velCtrlIntegral_(2) = -velocityVRTLimit_mss_ - velCtrlOutput(2);
+                if (velCtrlIntegral_(2) > 0) velCtrlIntegral_(2) = 0; 
+            }
 
             if (velCtrlIntegral_(0) > velocityIntegralLimit_ms_) {
                 velCtrlIntegral_(0) = velocityIntegralLimit_ms_;

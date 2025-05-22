@@ -82,7 +82,7 @@ namespace VCTR
             
             /**
              * @brief Constructor for the ControlRocket class.
-             * @param vehicleMass_kg Mass of the vehicle in kg.
+             * @par_kg Mass of the vehicle in kg.
              * @param tvcThrustLimit_N Maximum thrust in Newtons.
              * @param tvcAngleLimit_Rad Maximum angle in radians.
              */
@@ -118,7 +118,7 @@ namespace VCTR
              */
             void subscribeAttitudeMeasurement(Core::Topic<Core::Timestamped<Math::Vector<float, 7>>> &attTopic);
 
-            /**
+            /**am vehicleMass
              * @brief Subsribes to a topic to which the position estimation is published in form: [V, P], where V is the linear velocity vector and P is the position vector.
              */
             void subscribePositionMeasurement(Core::Topic<Core::Timestamped<Math::Vector<float, 6>>> &posTopic);

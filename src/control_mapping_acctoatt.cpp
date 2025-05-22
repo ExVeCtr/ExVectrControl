@@ -55,12 +55,12 @@ namespace VCTR
                 tiltOffAngle = tilt - velocityLimit_Rad_;
                 tilt = velocityLimit_Rad_;
             }
-            auto wantedForceMagnitude = accelSetpoint.magnitude();
+            //auto wantedForceMagnitude = accelSetpoint.magnitude();
 
             //auto wantedForce = velCtrlOutput.magnitude() * vehicleMass_kg_;
-            auto cosLosses = cos(tiltOffAngle); //Cosine losses due to the wanted tilt angle possibly not being reached.
-            if (cosLosses < 0) cosLosses = 0; //If the tilt angle is over 90 degrees, we don't want to apply any force, othewise we technically would need a negative force.
-            wantedForceMagnitude = wantedForceMagnitude / cosLosses; //Apply the cosine losses to the wanted force.
+            //auto cosLosses = cos(tiltOffAngle); //Cosine losses due to the wanted tilt angle possibly not being reached.
+            //if (cosLosses < 0) cosLosses = 0; //If the tilt angle is over 90 degrees, we don't want to apply any force, othewise we technically would need a negative force.
+            //wantedForceMagnitude = wantedForceMagnitude / cosLosses; //Apply the cosine losses to the wanted force.
 
             //Now we calculate the wanted attitude to achieve the wanted acceleration vector direction.
             Math::Quat_F wantedAttitude;
@@ -75,6 +75,7 @@ namespace VCTR
                 rotAngle = -velocityLimit_Rad_;
 
             wantedAttitude = Math::Quat_F(rotAxis, rotAngle);
+            //LOG_MSG("Wanted attitude: %.2f %.2f %.2f %.2f\n", wantedAttitude(0), wantedAttitude(1), wantedAttitude(2), wantedAttitude(3)); // Print the wanted attitude to the console
             attitudeTopic_.publish({0, 0, 0, wantedAttitude(0), wantedAttitude(1), wantedAttitude(2), wantedAttitude(3)}); //Publish the wanted attitude to the topic
 
         }

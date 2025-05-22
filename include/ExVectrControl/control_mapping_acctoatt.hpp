@@ -4,7 +4,7 @@
 #include "ExVectrCore/topic_subscribers.hpp"
 #include "ExVectrCore/timestamped.hpp"
 
-#include "ExVectrMath/matrix_vector.hpp"
+#include "ExVectrMath.hpp"
 
 #include "ExVectrDSP/value_covariance.hpp"
 
@@ -30,7 +30,7 @@ namespace VCTR
 
 
             // Control parameters
-            float velocityLimit_Rad_ = 35 * 3.14/180; // Velocity tilt limit in radians. Limits the maximum tilt angle from the Z-Axis of the vehicle for correcting velocity.
+            float velocityLimit_Rad_ = 35 * DEGREES; // Velocity tilt limit in radians. Limits the maximum tilt angle from the Z-Axis of the vehicle for correcting velocity.
 
 
             // Runtime data

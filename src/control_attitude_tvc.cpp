@@ -20,7 +20,7 @@ namespace VCTR
 
         
         ControlAttitudeTvc::ControlAttitudeTvc(float vehicleMass_kg, float tvcThrustLimit_N, float tvcAngleLimit_Rad) :
-            Core::Task_Periodic("Control Rocket", 50*Core::MILLISECONDS)
+            Core::Task_Periodic("Control Rocket", 20*Core::MILLISECONDS)
         {
             // Initialize the control parameters
             vehicleMass_kg_ = vehicleMass_kg;
@@ -172,12 +172,33 @@ namespace VCTR
 
 
             //################### Calculate the TVC output ################
-            auto wantedBodyForce = attitude.conjugate().rotate(accelSetpoint_ * vehicleMass_kg_);
-            //Current implementation does not take care of limits
-            Math::Vector_F forceVector = attCtrlOutput.cross(Math::Vector<float, 3>({0, 0, 1/tvcCGOffset_m_}));
-            forceVector = forceVector + wantedBodyForce.getProjectionOn(Math::Vector<float, 3>({0, 0, 1}));
+            Math::Vector_F wantedBodyForce = accelSetpoint_ * vehicleMass_kg_; //Calculate the wanted body force in body frame. The force is in the direction of the acceleration vector.
+            Math::Vector_F torqueVec = attCtrlOutput.cross(Math::Vector<float, 3>({0, 0, 1/tvcCGOffset_m_}));
+            //auto bodyZAxis = attitude.rotate(Math::Vector<float, 3>({0, 0, 1})); //Get the Z-axis in body frame
+            float bodyForceMagnitude = wantedBodyForce.magnitude();
+            float cosLosses = cos(wantedBodyForce.getAngleTo(Math::Vector<float, 3>({0, 0, 1}))); //Cosine losses due to the wanted tilt angle possibly not being reached.
+            if (cosLosses < 0) cosLosses = 0; //If the tilt angle is over 90 degrees, we don't want to apply any force, othewise we technically would need a negative force.
+            Math::Vector<float, 3> forceVector = torqueVec;
+            forceVector(2) += bodyForceMagnitude * cosLosses; //Add the force vector to the Z-axis. The Z-axis is the thrust vector in body frame.
 
-            //LOG_MSG("Force vector: %.2f %.2f %.2f |%.2f|\n", forceVector(0), forceVector(1), forceVector(2), forceVector.magnitude()); // Print the force vector to the console
+            // We now must take the TVC angle limit into account. 
+            // If the requested vector angle is over the limit, we use the closest possible and then we scale the output until the requested torque is reached.
+            auto tvcAngle = forceVector.getAngleTo(Math::Vector<float, 3>({0, 0, 1})); //Get the angle of the force vector to the Z-axis
+            auto tvcRotationAxis = (forceVector.cross(Math::Vector<float, 3>({0, 0, 1}))).normalize(); //Rotation axis is the cross product of the vector and the Z-Axis.
+            if (tvcAngle > tvcAngleLimit_Rad_) {
+                auto tvcRotation = Math::Quat_F(-tvcRotationAxis, tvcAngle - tvcAngleLimit_Rad_);//.conjugate();
+                auto forceVectorNew = tvcRotation.rotate(forceVector); //Rotate the vector back to the limit.
+                //Now we must scale it so the resulting torque is the same as the requested torque. The torque is the cross product of the force vector and the distance to the CG.
+                //auto forceMagnitude = forceVector.magnitude();
+                auto xyMag = sqrt(forceVector(0)*forceVector(0) + forceVector(1)*forceVector(1)); //Calculate the XY magnitude of the vector
+                auto xyMagNew = sqrt(forceVectorNew(0)*forceVectorNew(0) + forceVectorNew(1)*forceVectorNew(1)); //Calculate the XY magnitude of the new vector
+                auto correctionFactor = xyMag / xyMagNew; //Calculate the correction factor to scale the vector back to the limit.
+                if (compensateTVCAngle_)
+                    forceVectorNew = forceVectorNew * correctionFactor; //Scale the vector back to the limit.
+                forceVector = forceVectorNew;
+            } 
+
+            LOG_MSG("Force vector: %.2f %.2f %.2f |%.2f|\n", forceVector(0), forceVector(1), forceVector(2), forceVector.magnitude()); // Print the force vector to the console
 
             //################### publish the TVC output ################
             Math::Vector<float, 4> tvcOutput = Math::Vector<float, 4>({
@@ -185,11 +206,10 @@ namespace VCTR
             });
 
             if (!enableControl_) {
-                tvcOutput = Math::Vector<float, 4>({0, 0, 0.1, 0}); //FOR TESTING ONLY
+                tvcOutput = Math::Vector<float, 4>({0, 0, 0.1, 0});
             }
 
             tvcTopic_.publish(tvcOutput); //Publish the TVC output
-
 
         }
 
