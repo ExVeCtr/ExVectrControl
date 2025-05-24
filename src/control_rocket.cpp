@@ -20,7 +20,7 @@ namespace VCTR
 
         
         ControlRocket::ControlRocket(float vehicleMass_kg, float tvcThrustLimit_N, float tvcAngleLimit_Rad) :
-            Core::Task_Periodic("Control Rocket", 50*Core::MILLISECONDS)
+            Core::Task_Periodic("Control Rocket", 20*Core::MILLISECONDS)
         {
             // Initialize the control parameters
             vehicleMass_kg_ = vehicleMass_kg;
@@ -349,6 +349,11 @@ namespace VCTR
 
             tvcTopic_.publish(tvcOutput); //Publish the TVC output
 
+            // Using the current thrust output and expected max thrust, esimtate the actual max thrust using a simple linear model.
+            auto thrust = tvcOutput.block<3, 1>(0, 0).magnitude();
+            //auto gravityForce = vehicleMass_kg_ * Math::GRAVITY;
+            //tvcThrustMaxEstimated_ = tvcThrustMaxEstimated_ * 0.9 + (thrust) * 0.1; //Simple linear model to estimate the max thrust. We use a simple low pass filter to smooth the output.
+            tvcThrustMaxEstimated_ = thrust;
 
         }
 

@@ -56,7 +56,7 @@ namespace VCTR
             float positionHZTLimit_ms_ = 2; // Position limit in m/s for the horizontal axis. Limits the maximum velocity of the vehicle for correcting position.
             float positionVRTLimit_ms_ = 10; // Position limit in m/s for the vertical axis. Limits the maximum velocity of the vehicle for correcting position.
 
-            float velocityHZTGain_ = 2.5; // Velocity control gain for the horizontal axis. Maps velocity space to acceleration space.
+            float velocityHZTGain_ = 2; // Velocity control gain for the horizontal axis. Maps velocity space to acceleration space.
             float velocityVRTGain_ = 3; // Velocity control gain for the vertical axis. Maps velocity space to acceleration space.
             float velocityHZTIntegral_ = 0.4;
             float velocityVRTIntegral_ = 0.8; // Velocity integral gain for the horizontal and vertical axis. Maps velocity space to acceleration space.
@@ -65,10 +65,10 @@ namespace VCTR
             float velocityVRTLimit_mss_ = 8; // Velocity controller output limit in m/s/s for the vertical axis. Limits the maximum acceleration of the vehicle for correcting velocity.
             float velocityLimit_Rad_ = 35 * 3.14/180; // Velocity tilt limit in radians. Limits the maximum tilt angle from the Z-Axis of the vehicle for correcting velocity.
 
-            float attitudeGain_ = 2; // Attitude control gain.
-            float attitudeZGain_ = 0.8; // Attitude control gain.
-            float attitudeRateGain_ = 0.2; // Attitude rate control gain.
-            float attitudeRateZGain_ = 0.1; // Attitude rate control gain.
+            float attitudeGain_ = 1.6; // Attitude control gain.
+            float attitudeZGain_ = 0.6; // Attitude control gain.
+            float attitudeRateGain_ = 0.18; // Attitude rate control gain.
+            float attitudeRateZGain_ = 0.08; // Attitude rate control gain.
 
 
             // Runtime data
@@ -76,6 +76,8 @@ namespace VCTR
             Math::Vector<float, 6> stateSetpoint_; // Setpoint for the position. In form: [V, P], where V is the linear velocity vector and P is the position vector.
 
             bool enableControl_ = false; // Enable or disable the control system.
+
+            float tvcThrustMaxEstimated_ = 0; // Maximum thrust estimated by the control system. This is used to limit the maximum thrust of the vehicle.
 
 
         public:
@@ -132,6 +134,8 @@ namespace VCTR
              * @brief Returns the topic to which the thrust vector control output is published. In form: [X, Y, Z, T], where X, Y, Z show the thrust vector in body frame (magnitude of vector is thrust magnitude) and T is the roll torque (Z-Axis) angle in radians.
              */
             Core::Topic<Math::Vector<float, 4>> &getTvcTopic();
+
+            float getTvcThrustMaxEstimated() { return tvcThrustMaxEstimated_; }
 
 
             void enableControl(bool enable) { enableControl_ = enable; }
