@@ -135,6 +135,7 @@ namespace VCTR
 
 
             Math::Quat<float> wantedAttitude = stateSetpoint_.block<4, 1>(3, 0); //Get the wanted attitude from the setpoint
+            Math::Vector_F wantedAngularVelocity = stateSetpoint_.block<3, 1>(0, 0); //Get the wanted angular velocity from the setpoint
 
             //LOG_MSG("Attitude: %.2f %.2f %.2f %.2f\n", wantedAttitude(0), wantedAttitude(1), wantedAttitude(2), wantedAttitude(3));
             //FOR TESTING!!!! FORCES UPRIGHT POSITION
@@ -146,11 +147,15 @@ namespace VCTR
             Math::Vector<float, 3> attCtrlOutput;
             {
 
-                auto quatOut = wantedAttitude * attitude.conjugate(); //Calculate the quaternion rotation error
+                auto quatOut = wantedAttitude * attitude.conjugate() ; //Calculate the quaternion rotation error
+                attCtrlOutput = {quatOut(1), quatOut(2), quatOut(3)};
+                //attCtrlOutput = attitude.rotate(attCtrlOutput);
                 
-                attCtrlOutput(0) = asin(quatOut(1)) * attitudeGain_;
-                attCtrlOutput(1) = asin(quatOut(2)) * attitudeGain_;
-                attCtrlOutput(2) = asin(quatOut(3)) * attitudeZGain_;
+                attCtrlOutput(0) = asin(attCtrlOutput(0)) * attitudeGain_;
+                attCtrlOutput(1) = asin(attCtrlOutput(1)) * attitudeGain_;
+                attCtrlOutput(2) = asin(attCtrlOutput(2)) * attitudeZGain_;
+
+
 
                 if (quatOut(0) < 0) attCtrlOutput = -attCtrlOutput; //Make sure the quaternion is in the right direction
 
@@ -163,9 +168,9 @@ namespace VCTR
             
             //################### Calculate the attitude rate controller output ################
             Math::Vector<float, 3> attRateCtrlOutput({
-                -(angularVelocity(0)) * attitudeRateGain_,
-                -(angularVelocity(1)) * attitudeRateGain_,
-                -(angularVelocity(2)) * attitudeRateZGain_,
+                (wantedAngularVelocity(0) - angularVelocity(0)) * attitudeRateGain_,
+                (wantedAngularVelocity(1) - angularVelocity(1)) * attitudeRateGain_,
+                (wantedAngularVelocity(2) - angularVelocity(2)) * attitudeRateZGain_,
             });
 
             attCtrlOutput = attCtrlOutput + attRateCtrlOutput; //Add the attitude rate controller output to the attitude controller output.
@@ -198,7 +203,7 @@ namespace VCTR
                 forceVector = forceVectorNew;
             } 
 
-            LOG_MSG("Force vector: %.2f %.2f %.2f |%.2f|\n", forceVector(0), forceVector(1), forceVector(2), forceVector.magnitude()); // Print the force vector to the console
+            //LOG_MSG("Force vector: %.2f %.2f %.2f |%.2f|\n", forceVector(0), forceVector(1), forceVector(2), forceVector.magnitude()); // Print the force vector to the console
 
             //################### publish the TVC output ################
             Math::Vector<float, 4> tvcOutput = Math::Vector<float, 4>({

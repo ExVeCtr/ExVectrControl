@@ -42,10 +42,10 @@ namespace VCTR
             float positionHZTGain_ = 1; // Position control gain for the horizontal axis. Maps position space to velocity space.
             float positionVRTGain_ = 2; // Position control gain for the vertical axis. Maps position space to velocity space.
             float positionHZTLimit_ms_ = 2; // Position limit in m/s for the horizontal axis. Limits the maximum velocity of the vehicle for correcting position.
-            float positionVRTLimit_ms_ = 10; // Position limit in m/s for the vertical axis. Limits the maximum velocity of the vehicle for correcting position.
+            float positionVRTLimit_ms_ = 25; // Position limit in m/s for the vertical axis. Limits the maximum velocity of the vehicle for correcting position.
 
-            float velocityHZTGain_ = 2.5; // Velocity control gain for the horizontal axis. Maps velocity space to acceleration space.
-            float velocityVRTGain_ = 3; // Velocity control gain for the vertical axis. Maps velocity space to acceleration space.
+            float velocityHZTGain_ = 2; // Velocity control gain for the horizontal axis. Maps velocity space to acceleration space.
+            float velocityVRTGain_ = 2.5; // Velocity control gain for the vertical axis. Maps velocity space to acceleration space.
             float velocityHZTIntegral_ = 0.4;
             float velocityVRTIntegral_ = 0.8; // Velocity integral gain for the horizontal and vertical axis. Maps velocity space to acceleration space.
             float velocityIntegralLimit_ms_ = 3; // Velocity integral limit in m/s/s. Limits the maximum velocity of the vehicle for correcting position.

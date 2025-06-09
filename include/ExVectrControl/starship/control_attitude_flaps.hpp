@@ -29,6 +29,8 @@ namespace VCTR
         {
             float azimuthAngle_Rad = 0; // In what respect to north the vehicle should point to.
             float pitchAngle_Rad = 0; // What angle to pitch the vehicle to in respect to the Body Y Axis.
+
+            bool extentFlapsOnAscent = false; // If true, the flaps are fully extended in ascent mode. If false, the flaps are fully retracted.
             
             enum class BellyFlopMode : uint8_t
             {
@@ -73,16 +75,14 @@ namespace VCTR
             float flapBottomNeutralAngle_Rad_ = 40*DEGREES; // Neutral angle for the bottom flaps in radians.
 
             float enableThresX_ = 0.1f; // Control will enable if the velocity in Body X direction is above this threshold.
-            float enableThresAngle_Rad_ = 45*DEGREES; // Control will enable if the belly down angle is within this threshold.
+            float enableThresAngle_Rad_ = 35*DEGREES; // Control will enable if the belly down angle is within this threshold.
 
             //float attitudeXGain_ = 1; // Attitude control gain.
             //float attitudeYGain_ = 1; // Attitude control gain.
             //float attitudeZGain_ = 1; // Attitude control gain.
             float attitudeRateXGain_ = 0.2; // Attitude rate control gain.
-            float attitudeRateYGain_ = 0.5; // Attitude rate control gain.
+            float attitudeRateYGain_ = 0.2; // Attitude rate control gain.
             float attitudeRateZGain_ = 0.1; // Attitude rate control gain.
-
-            bool enableControl_ = false; // Enable or disable the control system.
 
 
         public:
@@ -123,9 +123,6 @@ namespace VCTR
              * 
              */
             void subscribeFlapSettingOutputTopic(Core::Topic<ControlAttitudeFlapSetting> &flapOutputTopic);
-
-
-            void enableControl(bool enable) { enableControl_ = enable; }
 
         private:
 

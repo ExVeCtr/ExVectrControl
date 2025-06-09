@@ -51,10 +51,10 @@ namespace VCTR
 
             float tiltLimit_Rad_ = 35 * DEGREES; // Tilt limit in radians. Limits the maximum tilt angle from the Z-Axis of the vehicle for correcting velocity.
 
-            float attitudeGain_ = 2; // Attitude control gain.
-            float attitudeZGain_ = 0.8; // Attitude control gain.
-            float attitudeRateGain_ = 0.2; // Attitude rate control gain.
-            float attitudeRateZGain_ = 0.1; // Attitude rate control gain.
+            float attitudeGain_ = 1.6; // Attitude control gain.
+            float attitudeZGain_ = 0.6; // Attitude control gain.
+            float attitudeRateGain_ = 0.18; // Attitude rate control gain.
+            float attitudeRateZGain_ = 0.08; // Attitude rate control gain.
 
             bool compensateTVCAngle_ = false; //If true, then if a TVC angle greater than the limit is needed, then the TVC thrust is increased to achieve the desired torque.
 
@@ -99,11 +99,23 @@ namespace VCTR
              */
             void subscribeAttitudeSetpoint(Core::Topic<Math::Vector<float, 7>> &setpointTopic);
 
+            void unsubscribeAttitudeSetpoint() {
+                stateSetpointSubr_.unsubscribe();
+            }
+
             /**
              * @brief Returns the topic to which the thrust vector control output is published. In form: [X, Y, Z, T], where X, Y, Z show the thrust vector in body frame (magnitude of vector is thrust magnitude) and T is the roll torque (Z-Axis) angle in radians.
              */
             Core::Topic<Math::Vector<float, 4>> &getTvcTopic();
 
+            /**
+             * @brief Sets the attitude state setpoint. This overrides the current setpoint, but will be lost if the setpoint topic is not unsubscribed.
+             * @param attitudeState The attitude state setpoint in form: [W, Q], where W is the angular velocity vector and Q is a unit quaternion rotation from the reference frame to body frame.
+             */
+            void setAttitudeStateSetpoint(const Math::Vector<float, 7> &attitudeState) { 
+                stateSetpointSubr_.getItem(); //Clears the subscriber item in case is already received new data but hasn't been processed yet. This would immediately override the setpoint we just set.
+                stateSetpoint_ = attitudeState;
+            }
 
             void enableControl(bool enable) { enableControl_ = enable; }
 
