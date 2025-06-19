@@ -51,16 +51,22 @@ namespace VCTR
 
             float tiltLimit_Rad_ = 35 * DEGREES; // Tilt limit in radians. Limits the maximum tilt angle from the Z-Axis of the vehicle for correcting velocity.
 
-            float attitudeGain_ = 1.6; // Attitude control gain.
+            float attitudeGain_ = 1.8; // Attitude control gain.
             float attitudeZGain_ = 0.6; // Attitude control gain.
-            float attitudeRateGain_ = 0.18; // Attitude rate control gain.
-            float attitudeRateZGain_ = 0.08; // Attitude rate control gain.
+            float attitudeIntegralGain_ = 0.5; // Attitude integral control gain.
+            float attitudeIntegralZGain_ = 0.0; // Attitude integral control gain in the Z-Axis.
+            float attitudeRateGain_ = 0.15; // Attitude rate control gain.
+            float attitudeRateZGain_ = 0.05; // Attitude rate control gain.
+
+            float integralLimit_ = 0.5; // Integral limit for the attitude control in the X, Y, Z axes.
+            float integralZLimit_ = 0.2; // Integral limit for the attitude control in the Z-Axis.
 
             bool compensateTVCAngle_ = false; //If true, then if a TVC angle greater than the limit is needed, then the TVC thrust is increased to achieve the desired torque.
 
 
             // Runtime data
             int64_t lastRunTimestamp_ = 0; // Timestamp of the last run in microseconds.
+            Math::Vector<float, 3> integral_ = 0; // Integral term for the attitude control in the X, Y, Z axes.
 
             bool enableControl_ = false; // Enable or disable the control system.
 
@@ -79,6 +85,10 @@ namespace VCTR
             void setAttitudeGain(float gain) { attitudeGain_ = gain; }
             /// @brief The P-Term gain for the attitude controller in the Z-Axis.
             void setAttitudeZGain(float gain) { attitudeZGain_ = gain; }
+            /// @brief The I-Term gain for the attitude controller.
+            void setAttitudeIntegralGain(float gain) { attitudeIntegralGain_ = gain; }
+            /// @brief The I-Term gain for the attitude controller in the Z-Axis.
+            void setAttitudeIntegralZGain(float gain) { attitudeIntegralZGain_ = gain; }
             /// @brief The P-Term gain for the attitude rate controller.
             void setAttitudeRateGain(float gain) { attitudeRateGain_ = gain; }
             /// @brief The P-Term gain for the attitude rate controller in the Z-Axis.

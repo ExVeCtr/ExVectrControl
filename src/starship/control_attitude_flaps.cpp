@@ -84,6 +84,8 @@ namespace VCTR
             // Determin of the control should be enabled or not
             //We want to only enalbe the flaps if the velocity in the x direction is above a certain threshold and ZY is below a certain threshold
             auto bodyXAxis = attitude.conjugate().rotate(Math::Vector_F({1, 0, 0})); // Get the body X-axis in reference frame
+            auto bodyYAxis = attitude.conjugate().rotate(Math::Vector_F({0, 1, 0})); // Get the body Y-axis in reference frame
+            auto bodyZAxis = attitude.conjugate().rotate(Math::Vector_F({0, 0, 1})); // Get the body Z-axis in reference frame
             auto velXAxis = velocity.getProjectionOn(bodyXAxis); // Project the velocity onto the body X-axis plane
             auto bellyDownAngle = bodyXAxis.getAngleTo(Math::Vector_F({0, 0, 1})); // Calculate the angle between the body X-axis and the Z-axis
             // Scale the flap factor so if over threshold, then begin reducing factor until 10 deg over the threshold, then disable flaps be setting factor 0
@@ -96,8 +98,31 @@ namespace VCTR
             ControlAttitudeFlapSetting flapSetting;
             if (controlSettings.bellyFlopMode == ControlAttitudeBellyFlopSetting::BellyFlopMode::BellyFlopMode_Stabilize) {
 
+                // Calculate the azimuth (with atan) and pitch when the vehicle is pitched down.
+                auto azimuthIs = atan2f(bodyZAxis(1), bodyZAxis(0)); // Calculate the azimuth angle in radians
+                auto pitchIs = atan2f(bodyZAxis(2), sqrtf(bodyZAxis(0)*bodyZAxis(0) + bodyZAxis(1)*bodyZAxis(1))); // Calculate the pitch angle in radians
+
                 // Calculate the controller output
-                Math::Vector<float, 3> attRateCtrlOutput({
+                Math::Vector<float, 3> attRateCtrlOutput = 0;
+
+                float azimuthOutput = (controlSettings.azimuthAngle_Rad - azimuthIs) * attitudeAzimuGain_;
+                float pitchOutput = (controlSettings.pitchAngle_Rad - pitchIs) * attitudePitchGain_;
+
+                if (azimuthOutput > attitudeAzimuLimit_Perc_) {
+                    azimuthOutput = attitudeAzimuLimit_Perc_;
+                } else if (azimuthOutput < -attitudeAzimuLimit_Perc_) {
+                    azimuthOutput = -attitudeAzimuLimit_Perc_;
+                }
+
+                // Azimuth and pitch control
+                attRateCtrlOutput = attRateCtrlOutput + Math::Vector<float, 3>({
+                    azimuthOutput,
+                    pitchOutput,
+                    0
+                });
+
+                // Ang Vel influence.
+                attRateCtrlOutput = attRateCtrlOutput + Math::Vector<float, 3>({
                     -(angularVelocity(0)) * attitudeRateXGain_,
                     -(angularVelocity(1)) * attitudeRateYGain_,
                     -(angularVelocity(2)) * attitudeRateZGain_,

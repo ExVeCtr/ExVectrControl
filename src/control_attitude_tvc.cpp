@@ -74,6 +74,7 @@ namespace VCTR
 
             lastRunTimestamp_ = Core::NOW();
             accelSetpoint_ = 0;
+            integral_ = 0; // Reset the integral term for the attitude control
 
         }
 
@@ -140,32 +141,41 @@ namespace VCTR
             //LOG_MSG("Attitude: %.2f %.2f %.2f %.2f\n", wantedAttitude(0), wantedAttitude(1), wantedAttitude(2), wantedAttitude(3));
             //FOR TESTING!!!! FORCES UPRIGHT POSITION
             //wantedAttitude = Math::Quat_F(1, 0, 0, 0);
-            
 
+
+            //#################### Calculate the attitude error ################
+            auto quatOut = wantedAttitude * attitude.conjugate() ; //Calculate the quaternion rotation error
+            auto attitudeError = Math::Vector<float, 3>({asin(quatOut(1)), asin(quatOut(2)), asin(quatOut(3))});
+            if (quatOut(0) < 0) attitudeError = -attitudeError; //Make sure the quaternion is in the right direction
+            
             //################### Calculate the attitude controller output ################
             //We use a quaternion based algorithm to calculate the rotation error between the wanted attitude and the current attitude. The result is in body frame.
-            Math::Vector<float, 3> attCtrlOutput;
-            {
-
-                auto quatOut = wantedAttitude * attitude.conjugate() ; //Calculate the quaternion rotation error
-                attCtrlOutput = {quatOut(1), quatOut(2), quatOut(3)};
-                //attCtrlOutput = attitude.rotate(attCtrlOutput);
-                
-                attCtrlOutput(0) = asin(attCtrlOutput(0)) * attitudeGain_;
-                attCtrlOutput(1) = asin(attCtrlOutput(1)) * attitudeGain_;
-                attCtrlOutput(2) = asin(attCtrlOutput(2)) * attitudeZGain_;
-
-
-
-                if (quatOut(0) < 0) attCtrlOutput = -attCtrlOutput; //Make sure the quaternion is in the right direction
-
-                //attCtrlOutput = attCtrlOutput * attitudeGain_;
-
-            }
-
-            //attCtrlOutput = Math::Vector<float, 3>();
+            Math::Vector<float, 3> attCtrlOutput({
+                attitudeError(0) * attitudeGain_,
+                attitudeError(1) * attitudeGain_,
+                attitudeError(2) * attitudeZGain_
+            });
 
             
+            //################### Calculate the integral term ################
+            //We use a simple integral term to reduce the steady state error. The integral term is calculated by summing up the attitude error multiplied by the delta time and the integral gain.
+            //We must calculate the XY seperate from the Z-axis, because the Z-axis dynamics are different.
+            if (enableControl_) {
+                integral_(0) += attitudeError(0) * dTime * attitudeIntegralGain_;
+                integral_(1) += attitudeError(1) * dTime * attitudeIntegralGain_;
+                integral_(2) += attitudeError(2) * dTime * attitudeIntegralZGain_;
+            } else {
+                integral_ = 0; // Reset the integral term if control is disabled
+            }
+            //We must limit the integral term to prevent windup. We do this by clamping the integral term to a maximum value.
+            if (integral_(0) > integralLimit_) integral_(0) = integralLimit_;
+            else if (integral_(0) < -integralLimit_) integral_(0) = -integralLimit_;
+            if (integral_(1) > integralLimit_) integral_(1) = integralLimit_;
+            else if (integral_(1) < -integralLimit_) integral_(1) = -integralLimit_;
+            if (integral_(2) > integralZLimit_) integral_(2) = integralZLimit_;
+            else if (integral_(2) < -integralZLimit_) integral_(2) = -integralZLimit_;
+
+
             //################### Calculate the attitude rate controller output ################
             Math::Vector<float, 3> attRateCtrlOutput({
                 (wantedAngularVelocity(0) - angularVelocity(0)) * attitudeRateGain_,
@@ -173,7 +183,7 @@ namespace VCTR
                 (wantedAngularVelocity(2) - angularVelocity(2)) * attitudeRateZGain_,
             });
 
-            attCtrlOutput = attCtrlOutput + attRateCtrlOutput; //Add the attitude rate controller output to the attitude controller output.
+            attCtrlOutput = attCtrlOutput + attRateCtrlOutput + integral_; //Add the attitude rate controller output to the attitude controller output.
 
 
             //################### Calculate the TVC output ################
