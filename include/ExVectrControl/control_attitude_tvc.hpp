@@ -51,15 +51,15 @@ namespace VCTR
 
             float tiltLimit_Rad_ = 35 * DEGREES; // Tilt limit in radians. Limits the maximum tilt angle from the Z-Axis of the vehicle for correcting velocity.
 
-            float attitudeGain_ = 1.8; // Attitude control gain.
+            float attitudeGain_ = 1.2; // Attitude control gain.
             float attitudeZGain_ = 0.6; // Attitude control gain.
             float attitudeIntegralGain_ = 0.5; // Attitude integral control gain.
             float attitudeIntegralZGain_ = 0.0; // Attitude integral control gain in the Z-Axis.
-            float attitudeRateGain_ = 0.15; // Attitude rate control gain.
+            float attitudeRateGain_ = 0.22; // Attitude rate control gain.
             float attitudeRateZGain_ = 0.05; // Attitude rate control gain.
 
             float integralLimit_ = 0.5; // Integral limit for the attitude control in the X, Y, Z axes.
-            float integralZLimit_ = 0.2; // Integral limit for the attitude control in the Z-Axis.
+            float integralZLimit_ = 0;//0.2; // Integral limit for the attitude control in the Z-Axis.
 
             bool compensateTVCAngle_ = false; //If true, then if a TVC angle greater than the limit is needed, then the TVC thrust is increased to achieve the desired torque.
 

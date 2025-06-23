@@ -39,12 +39,12 @@ namespace VCTR
 
 
             // Control parameters
-            float positionHZTGain_ = 1; // Position control gain for the horizontal axis. Maps position space to velocity space.
+            float positionHZTGain_ = 0.8; // Position control gain for the horizontal axis. Maps position space to velocity space.
             float positionVRTGain_ = 2; // Position control gain for the vertical axis. Maps position space to velocity space.
             float positionHZTLimit_ms_ = 3; // Position limit in m/s for the horizontal axis. Limits the maximum velocity of the vehicle for correcting position.
             float positionVRTLimit_ms_ = 15; // Position limit in m/s for the vertical axis. Limits the maximum velocity of the vehicle for correcting position.
 
-            float velocityHZTGain_ = 2; // Velocity control gain for the horizontal axis. Maps velocity space to acceleration space.
+            float velocityHZTGain_ = 2.2; // Velocity control gain for the horizontal axis. Maps velocity space to acceleration space.
             float velocityVRTGain_ = 2.5; // Velocity control gain for the vertical axis. Maps velocity space to acceleration space.
             float velocityHZTIntegral_ = 0.4;
             float velocityVRTIntegral_ = 0.8; // Velocity integral gain for the horizontal and vertical axis. Maps velocity space to acceleration space.
@@ -91,7 +91,7 @@ namespace VCTR
             void subscribeSetpoint(Core::Topic<Math::Vector<float, 6>> &setpointTopic);
 
             /**
-             * @brief Returns the topic to which the thrust vector control output is published. In form: [X, Y, Z, T], where X, Y, Z show the thrust vector in body frame (magnitude of vector is thrust magnitude) and T is the roll torque (Z-Axis) angle in radians.
+             * @brief Returns the topic to which the wanted acceleration in world frame is published. In form: [X, Y, Z], where X North, Y West, Z Up.
              */
             Core::Topic<Math::Vector<float, 3>> &getAccelTopic();
 
