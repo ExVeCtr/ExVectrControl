@@ -126,8 +126,8 @@ namespace VCTR
             Math::Vector<float, 3> angVel = attitudeState_.block<3, 1>(0, 0); // Angular velocity in body frame
 
             // Update the attitude and angular velocity
-            auto totalTorque = torqueSumBody_ + attQuat.conjugate().rotate(torqueSumNav_); //Get the total torque.
-            attQuat = attQuat * Math::Quat_F(angVel.normalize(), angVel.magnitude() * dTime); // Update quaternion using angular velocity
+            auto totalTorque = torqueSumBody_;// + attQuat.conjugate().rotate(torqueSumNav_); //Get the total torque.
+            attQuat = Math::Quat_F(angVel.normalize(), angVel.magnitude() * dTime) * attQuat; // Update quaternion using angular velocity
             angVel(0) += totalTorque(0) / inertiaTensor_(0, 0) * dTime; // Update angular velocity using torque and inertia tensor
             angVel(1) += totalTorque(1) / inertiaTensor_(1, 1) * dTime; // Update angular velocity using torque and inertia tensor
             angVel(2) += totalTorque(2) / inertiaTensor_(2, 2) * dTime; // Update angular velocity using torque and inertia tensor
