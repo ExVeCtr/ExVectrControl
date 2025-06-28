@@ -78,9 +78,9 @@ namespace VCTR
             float enableThresAngle_Rad_ = 35*DEGREES; // Control will enable if the belly down angle is within this threshold.
 
             float attitudeAzimuGain_ = 0.3; // Attitude in azimuth control gain.
-            float attitudePitchGain_ = 1.5; // Attitude in pitch control gain.
+            float attitudePitchGain_ = 1.2; // Attitude in pitch control gain.
             float attitudeRateXGain_ = 0.2; // Attitude rate control gain.
-            float attitudeRateYGain_ = 0.5; // Attitude rate control gain.
+            float attitudeRateYGain_ = 0.4; // Attitude rate control gain.
             float attitudeRateZGain_ = 0.1; // Attitude rate control gain.
 
             float attitudeAzimuLimit_Perc_ = 0.5; // Limit for the Azimuth/yaw output in percent of the maximum angle.
