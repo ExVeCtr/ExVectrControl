@@ -9,7 +9,6 @@
 
 #include "ExVectrDSP/value_covariance.hpp"
 
-
 namespace VCTR
 {
     namespace CTRL
@@ -22,45 +21,40 @@ namespace VCTR
         class ControlPositionStandard : public Core::Task_Periodic
         {
         private:
-
             Core::Simple_Subscriber<Core::Timestamped<Math::Vector<float, 6>>> posSubr_;
 
             // Setpoint for the position. In form: [V, P], where V is the linear velocity vector and P is the position vector.
             Core::Simple_Subscriber<Math::Vector<float, 6>> stateSetpointSubr_;
 
-            //This is where the accel control output is published. In form: [X, Y, Z], where X, Y, Z show the accel vector in reference frame
+            // This is where the accel control output is published. In form: [X, Y, Z], where X, Y, Z show the accel vector in reference frame
             Core::Topic<Math::Vector<float, 3>> accelTopic_;
-
 
             // Current vehicle state estimation. In form: [V, P], where V is the linear velocity vector and P is the position vector.
             Core::Timestamped<Math::Vector<float, 6>> stateEstimation_;
 
             Math::Vector<float, 3> velCtrlIntegral_; // Last position estimation in reference frame (X-North, Y-West, Z-Up).
 
-
             // Control parameters
-            float positionHZTGain_ = 0.8; // Position control gain for the horizontal axis. Maps position space to velocity space.
-            float positionVRTGain_ = 2; // Position control gain for the vertical axis. Maps position space to velocity space.
-            float positionHZTLimit_ms_ = 3; // Position limit in m/s for the horizontal axis. Limits the maximum velocity of the vehicle for correcting position.
+            float positionHZTGain_ = 0.5;    // Position control gain for the horizontal axis. Maps position space to velocity space.
+            float positionVRTGain_ = 2;      // Position control gain for the vertical axis. Maps position space to velocity space.
+            float positionHZTLimit_ms_ = 3;  // Position limit in m/s for the horizontal axis. Limits the maximum velocity of the vehicle for correcting position.
             float positionVRTLimit_ms_ = 15; // Position limit in m/s for the vertical axis. Limits the maximum velocity of the vehicle for correcting position.
 
-            float velocityHZTGain_ = 2.5; // Velocity control gain for the horizontal axis. Maps velocity space to acceleration space.
+            float velocityHZTGain_ = 2.2; // Velocity control gain for the horizontal axis. Maps velocity space to acceleration space.
             float velocityVRTGain_ = 2.5; // Velocity control gain for the vertical axis. Maps velocity space to acceleration space.
-            float velocityHZTIntegral_ = 0.4;
-            float velocityVRTIntegral_ = 0.8; // Velocity integral gain for the horizontal and vertical axis. Maps velocity space to acceleration space.
+            float velocityHZTIntegral_ = 0.2;
+            float velocityVRTIntegral_ = 0.8;    // Velocity integral gain for the horizontal and vertical axis. Maps velocity space to acceleration space.
             float velocityIntegralLimit_ms_ = 3; // Velocity integral limit in m/s/s. Limits the maximum velocity of the vehicle for correcting position.
-            float velocityHZTLimit_mss_ = 2; // Velocity controller output limit in m/s/s for the horizontal axis. Limits the maximum acceleration of the vehicle for correcting velocity.
-            float velocityVRTLimit_mss_ = 8; // Velocity controller output limit in m/s/s for the vertical axis. Limits the maximum acceleration of the vehicle for correcting velocity.
+            float velocityHZTLimit_mss_ = 2;     // Velocity controller output limit in m/s/s for the horizontal axis. Limits the maximum acceleration of the vehicle for correcting velocity.
+            float velocityVRTLimit_mss_ = 8;     // Velocity controller output limit in m/s/s for the vertical axis. Limits the maximum acceleration of the vehicle for correcting velocity.
 
             // Runtime data
-            int64_t lastRunTimestamp_ = 0; // Timestamp of the last run in microseconds.
+            int64_t lastRunTimestamp_ = 0;         // Timestamp of the last run in microseconds.
             Math::Vector<float, 6> stateSetpoint_; // Setpoint for the position. In form: [V, P], where V is the linear velocity vector and P is the position vector.
 
             bool enableControl_ = false; // Enable or disable the control system.
 
-
         public:
-            
             /**
              * @brief Constructor for the ControlRocket class.
              */
@@ -95,17 +89,13 @@ namespace VCTR
              */
             Core::Topic<Math::Vector<float, 3>> &getAccelTopic();
 
-
             void enableControl(bool enable) { enableControl_ = enable; }
-            
-            
+
             void taskCheck() override;
 
             void taskInit() override;
 
             void taskThread() override;
-
-            
         };
 
     }
