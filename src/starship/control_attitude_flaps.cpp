@@ -24,17 +24,17 @@ ControlAttitudeFlaps::ControlAttitudeFlaps()
  * quaternion rotation from the reference frame to body frame.
  */
 void ControlAttitudeFlaps::subscribeAttitudeMeasurement(
-    Core::Topic<Core::Timestamped<Math::Vector<float, 7>>>& attTopic) {
+    Core::Topic<Core::Timestamped<Math::Vector<float, 7>>> &attTopic) {
   attMeasSubr_.subscribe(attTopic);
 }
 
 void ControlAttitudeFlaps::subscribePositionMeasurement(
-    Core::Topic<Core::Timestamped<Math::Vector<float, 6>>>& posTopic) {
+    Core::Topic<Core::Timestamped<Math::Vector<float, 6>>> &posTopic) {
   posMeasSubr_.subscribe(posTopic);
 }
 
 void ControlAttitudeFlaps::subscribeFlapSettingOutputTopic(
-    Core::Topic<ControlAttitudeFlapSetting>& flapOutputTopic) {
+    Core::Topic<ControlAttitudeFlapSetting> &flapOutputTopic) {
   flapOutputTopic_.subscribe(flapOutputTopic);
 }
 
@@ -60,13 +60,13 @@ void ControlAttitudeFlaps::taskThread() {
     attitudeEstimation_ = attMeasSubr_.getItem();
   }
 
-  auto& controlSettings = controlSetting_.getItem();
+  auto &controlSettings = controlSetting_.getItem();
   // controlSettings.bellyFlopMode =
   // ControlAttitudeBellyFlopSetting::BellyFlopMode::BellyFlopMode_Stabilize; //
   // Force the belly flop mode to stabilize for now, this can be changed later
 
   // Retrieve the latest data from the state vectors
-  // Math::Vector_F position = positionEstimation_.data.block<3, 1>(3, 0);
+  Math::Vector_F position = positionEstimation_.data.block<3, 1>(3, 0);
   Math::Vector_F velocity = positionEstimation_.data.block<3, 1>(0, 0);
   Math::Quat_F attitude = attitudeEstimation_.data.block<4, 1>(3, 0);
   auto angularVelocity = attitudeEstimation_.data.block<3, 1>(0, 0);
@@ -74,29 +74,27 @@ void ControlAttitudeFlaps::taskThread() {
   // Determin of the control should be enabled or not
   // We want to only enalbe the flaps if the velocity in the x direction is
   // above a certain threshold and ZY is below a certain threshold
-  auto bodyXAxis = attitude.conjugate().rotate(
-      Math::Vector_F({1, 0, 0}));  // Get the body X-axis in reference frame
-  auto bodyYAxis = attitude.conjugate().rotate(
-      Math::Vector_F({0, 1, 0}));  // Get the body Y-axis in reference frame
-  auto bodyZAxis = attitude.conjugate().rotate(
-      Math::Vector_F({0, 0, 1}));  // Get the body Z-axis in reference frame
+  auto bodyXAxis = attitude.rotate(
+      Math::Vector_F({1, 0, 0})); // Get the body X-axis in reference frame
+  auto bodyYAxis = attitude.rotate(
+      Math::Vector_F({0, 1, 0})); // Get the body Y-axis in reference frame
+  auto bodyZAxis = attitude.rotate(
+      Math::Vector_F({0, 0, 1})); // Get the body Z-axis in reference frame
   auto velXAxis = velocity.getProjectionOn(
-      bodyXAxis);  // Project the velocity onto the body X-axis plane
+      bodyXAxis); // Project the velocity onto the body X-axis plane
   auto bellyDownAngle = bodyXAxis.getAngleTo(Math::Vector_F(
-      {0, 0,
-       1}));  // Calculate the angle between the body X-axis and the Z-axis
+      {0, 0, 1})); // Calculate the angle between the body X-axis and the Z-axis
   // Scale the flap factor so if over threshold, then begin reducing factor
   // until 10 deg over the threshold, then disable flaps be setting factor 0
   float flapFactor =
       (bellyDownAngle - enableThresAngle_Rad_) /
-      (20 *
-       DEGREES);  // Calculate the flap factor based on the belly down angle
+      (20 * DEGREES); // Calculate the flap factor based on the belly down angle
   if (flapFactor < 0)
-    flapFactor = 0;  // If the belly down angle is below the threshold, set the
-                     // flap factor to 0
+    flapFactor = 0; // If the belly down angle is below the threshold, set the
+                    // flap factor to 0
   if (flapFactor > 1)
-    flapFactor = 1;  // If the belly down angle is above the threshold, set the
-                     // flap factor to 1
+    flapFactor = 1; // If the belly down angle is above the threshold, set the
+                    // flap factor to 1
   flapFactor = 1 - flapFactor;
   // LOG_MSG("Belly down angle: %.2f, thres: %.2f, flap factor: %.2f\n",
   // bellyDownAngle / DEGREES, enableThresAngle_Rad_ / DEGREES, flapFactor); //
@@ -108,12 +106,12 @@ void ControlAttitudeFlaps::taskThread() {
     // Calculate the azimuth (with atan) and pitch when the vehicle is pitched
     // down.
     auto azimuthIs = atan2f(
-        bodyZAxis(1), bodyZAxis(0));  // Calculate the azimuth angle in radians
-    auto pitchIs = atan2f(
-        bodyZAxis(2),
-        sqrtf(bodyZAxis(0) * bodyZAxis(0) +
-              bodyZAxis(1) *
-                  bodyZAxis(1)));  // Calculate the pitch angle in radians
+        bodyZAxis(1), bodyZAxis(0)); // Calculate the azimuth angle in radians
+    auto pitchIs =
+        atan2f(bodyZAxis(2),
+               sqrtf(bodyZAxis(0) * bodyZAxis(0) +
+                     bodyZAxis(1) *
+                         bodyZAxis(1))); // Calculate the pitch angle in radians
 
     // Calculate the controller output
     Math::Vector<float, 3> attRateCtrlOutput = 0;
@@ -142,11 +140,11 @@ void ControlAttitudeFlaps::taskThread() {
 
     // Ang Vel influence.
     attRateCtrlOutput =
-        attRateCtrlOutput + Math::Vector<float, 3>({
+        attRateCtrlOutput + Math::Vector<float, 3>{
                                 -(angularVelocity(0)) * attitudeRateXGain_,
                                 -(angularVelocity(1)) * attitudeRateYGain_,
                                 -(angularVelocity(2)) * attitudeRateZGain_,
-                            });
+                            };
 
     // Output to flap mapping
     flapSetting.flapTLAngle_Rad =
@@ -166,18 +164,20 @@ void ControlAttitudeFlaps::taskThread() {
         (-attRateCtrlOutput(0) + attRateCtrlOutput(1) - attRateCtrlOutput(2)) *
             flapFactor;
 
-    // flapSetting.flapTLAngle_Rad = 0 * DEGREES;
-    // flapSetting.flapTRAngle_Rad = 0 * DEGREES;
-    // flapSetting.flapBLAngle_Rad = 90 * DEGREES;
-    // flapSetting.flapBRAngle_Rad = 90 * DEGREES;
+    // flapSetting.flapTLAngle_Rad = 45 * DEGREES;
+    // flapSetting.flapTRAngle_Rad = 45 * DEGREES;
+    // flapSetting.flapBLAngle_Rad = 45 * DEGREES;
+    // flapSetting.flapBRAngle_Rad = 45 * DEGREES;
   } else if (controlSettings.bellyFlopMode ==
              ControlAttitudeBellyFlopSetting::BellyFlopMode::
                  BellyFlopMode_Upright) {
     // Output to flap mapping
     flapSetting.flapTLAngle_Rad = 0;
     flapSetting.flapTRAngle_Rad = 0;
-    flapSetting.flapBLAngle_Rad = 90 * DEGREES;  // Move bottom flaps in fully
-    flapSetting.flapBRAngle_Rad = 90 * DEGREES;  // Move bottom flaps in fully
+    flapSetting.flapBLAngle_Rad = 90 * DEGREES;
+    flapSetting.flapBRAngle_Rad = 90 * DEGREES;
+
+    // flapSetting.flapTLAngle_Rad = 30 * DEGREES;
   } else {
     flapSetting.flapTLAngle_Rad =
         90 * DEGREES * !controlSettings.extentFlapsOnAscent;
@@ -189,11 +189,11 @@ void ControlAttitudeFlaps::taskThread() {
         90 * DEGREES * !controlSettings.extentFlapsOnAscent;
   }
 
-  flapSetting.enableFlaps = true;  // enableControl_;
+  flapSetting.enableFlaps = true; // enableControl_;
 
   // Publish the flap setting to the topic
   flapOutputTopic_.publish(flapSetting);
 }
 
-}  // namespace CTRL
-}  // namespace VCTR
+} // namespace CTRL
+} // namespace VCTR

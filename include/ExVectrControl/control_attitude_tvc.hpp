@@ -1,144 +1,175 @@
 #ifndef EXVECTRCONTROL_CONTROLATTITUDETVC_HPP
 #define EXVECTRCONTROL_CONTROLATTITUDETVC_HPP
 
-#include "ExVectrCore/topic_subscribers.hpp"
-#include "ExVectrCore/timestamped.hpp"
 #include "ExVectrCore/task_types.hpp"
-
+#include "ExVectrCore/timestamped.hpp"
+#include "ExVectrCore/topic_subscribers.hpp"
+#include "ExVectrDSP/value_covariance.hpp"
 #include "ExVectrMath.hpp"
 
-#include "ExVectrDSP/value_covariance.hpp"
+namespace VCTR {
+namespace CTRL {
 
-namespace VCTR
-{
-    namespace CTRL
-    {
+/**
+ * @brief Simple one dimensional PID controller.
+ */
+class ControlAttitudeTvc : public Core::Task_Periodic {
+private:
+  Core::Simple_Subscriber<Core::Timestamped<Math::Vector<float, 7>>> attSubr_;
 
-        /**
-         * @brief Simple one dimensional PID controller.
-         */
-        class ControlAttitudeTvc : public Core::Task_Periodic
-        {
-        private:
-            Core::Simple_Subscriber<Core::Timestamped<Math::Vector<float, 7>>> attSubr_;
+  // Setpoint for the position. In form: [V, P], where V is the linear velocity
+  // vector and P is the position vector.
+  Core::Simple_Subscriber<Math::Vector<float, 7>> stateSetpointSubr_;
+  Math::Vector<float, 7>
+      stateSetpoint_; // Setpoint for the position. In form: [V, P], where V is
+                      // the linear velocity vector and P is the position
+                      // vector.
+  // Setpoint for the acceleration in reference frame.
+  Core::Simple_Subscriber<Math::Vector<float, 3>> accelSetpointSubr_;
+  Math::Vector<float, 3>
+      accelSetpoint_; // Setpoint for the acceleration in reference frame.
 
-            // Setpoint for the position. In form: [V, P], where V is the linear velocity vector and P is the position vector.
-            Core::Simple_Subscriber<Math::Vector<float, 7>> stateSetpointSubr_;
-            Math::Vector<float, 7> stateSetpoint_; // Setpoint for the position. In form: [V, P], where V is the linear velocity vector and P is the position vector.
-            // Setpoint for the acceleration in reference frame.
-            Core::Simple_Subscriber<Math::Vector<float, 3>> accelSetpointSubr_;
-            Math::Vector<float, 3> accelSetpoint_; // Setpoint for the acceleration in reference frame.
+  // This is where the tvc control output is published. In form: [X, Y, Z, T],
+  // where X, Y, Z show the thrust vector in body frame (magnitude of vector is
+  // thrust magnitude) and T is the roll torque (Z-Axis) angle in radians.
+  Core::Topic<Math::Vector<float, 4>> tvcTopic_;
 
-            // This is where the tvc control output is published. In form: [X, Y, Z, T], where X, Y, Z show the thrust vector in body frame (magnitude of vector is thrust magnitude) and T is the roll torque (Z-Axis) angle in radians.
-            Core::Topic<Math::Vector<float, 4>> tvcTopic_;
+  // Current attitude estimation. In form: [W, Q], where W is the angular
+  // velocity vector and Q is a unit quaternion rotation from the reference
+  // frame to body frame.
+  Core::Timestamped<Math::Vector<float, 7>> attitudeEstimation_;
 
-            // Current attitude estimation. In form: [W, Q], where W is the angular velocity vector and Q is a unit quaternion rotation from the reference frame to body frame.
-            Core::Timestamped<Math::Vector<float, 7>> attitudeEstimation_;
+  // last control output torque
+  Math::Vector<float, 3> lastControlOutputTorque_;
+  // last control output force
+  float lastControlOutputForce_;
 
-            // last control output torque
-            Math::Vector<float, 3> lastControlOutputTorque_;
-            // last control output force
-            float lastControlOutputForce_;
+  // Control parameters
+  float vehicleMass_kg_ = 1;    // Mass of the vehicle in kg.
+  float tvcThrustLimit_N_ = 20; // Maximum thrust in Newtons.
+  float tvcAngleLimit_Rad_ = 1; // Maximum angle in radians.
+  float tvcCGOffset_m_ =
+      -0.35; // Center of gravity offset in meters. This is the distance from
+             // the CG of the vehicle to the center of the thrust vector
+             // control system.
 
-            // Control parameters
-            float vehicleMass_kg_ = 1;    // Mass of the vehicle in kg.
-            float tvcThrustLimit_N_ = 20; // Maximum thrust in Newtons.
-            float tvcAngleLimit_Rad_ = 1; // Maximum angle in radians.
-            float tvcCGOffset_m_ = -0.35; // Center of gravity offset in meters. This is the distance from the CG of the vehicle to the center of the thrust vector control system.
+  float tiltLimit_Rad_ =
+      35 * DEGREES; // Tilt limit in radians. Limits the maximum tilt angle
+                    // from the Z-Axis of the vehicle for correcting velocity.
 
-            float tiltLimit_Rad_ = 35 * DEGREES; // Tilt limit in radians. Limits the maximum tilt angle from the Z-Axis of the vehicle for correcting velocity.
+  float attitudeGain_ = 1.2;       // Attitude control gain.
+  float attitudeZGain_ = 0.4;      // Attitude control gain.
+  float attitudeIntegralGain_ = 0; // Attitude integral control gain.
+  float attitudeIntegralZGain_ =
+      0.0; // Attitude integral control gain in the Z-Axis.
+  float attitudeRateGain_ = 0.5;   // Attitude rate control gain.
+  float attitudeRateZGain_ = 0.08; // Attitude rate control gain.
 
-            float attitudeGain_ = 1;            // Attitude control gain.
-            float attitudeZGain_ = 0.4;         // Attitude control gain.
-            float attitudeIntegralGain_ = 0;    // Attitude integral control gain.
-            float attitudeIntegralZGain_ = 0.0; // Attitude integral control gain in the Z-Axis.
-            float attitudeRateGain_ = 0.3;      // Attitude rate control gain.
-            float attitudeRateZGain_ = 0.08;    // Attitude rate control gain.
+  float integralLimit_ =
+      0.5; // Integral limit for the attitude control in the X, Y, Z axes.
+  float integralZLimit_ =
+      0; // 0.2; // Integral limit for the attitude control in the Z-Axis.
 
-            float integralLimit_ = 0.5; // Integral limit for the attitude control in the X, Y, Z axes.
-            float integralZLimit_ = 0;  // 0.2; // Integral limit for the attitude control in the Z-Axis.
+  bool compensateTVCAngle_ =
+      false; // If true, then if a TVC angle greater than the limit is needed,
+             // then the TVC thrust is increased to achieve the desired torque.
 
-            bool compensateTVCAngle_ = false; // If true, then if a TVC angle greater than the limit is needed, then the TVC thrust is increased to achieve the desired torque.
+  // Runtime data
+  int64_t lastRunTimestamp_ = 0; // Timestamp of the last run in microseconds.
+  Math::Vector<float, 3> integral_ =
+      0; // Integral term for the attitude control in the X, Y, Z axes.
 
-            // Runtime data
-            int64_t lastRunTimestamp_ = 0;        // Timestamp of the last run in microseconds.
-            Math::Vector<float, 3> integral_ = 0; // Integral term for the attitude control in the X, Y, Z axes.
+  bool enableControl_ = false; // Enable or disable the control system.
 
-            bool enableControl_ = false; // Enable or disable the control system.
+public:
+  /**
+   * @brief Constructor for the ControlRocket class.
+   * @param vehicleMass_kg Mass of the vehicle in kg.
+   * @param tvcThrustLimit_N Maximum thrust in Newtons.
+   * @param tvcAngleLimit_Rad Maximum angle in radians.
+   */
+  ControlAttitudeTvc(float vehicleMass_kg = 1.0f,
+                     float tvcThrustLimit_N = 20.0f,
+                     float tvcAngleLimit_Rad = 15 * 3.14 / 180);
 
-        public:
-            /**
-             * @brief Constructor for the ControlRocket class.
-             * @param vehicleMass_kg Mass of the vehicle in kg.
-             * @param tvcThrustLimit_N Maximum thrust in Newtons.
-             * @param tvcAngleLimit_Rad Maximum angle in radians.
-             */
-            ControlAttitudeTvc(float vehicleMass_kg = 1.0f, float tvcThrustLimit_N = 20.0f, float tvcAngleLimit_Rad = 15 * 3.14 / 180);
+  /// @brief The P-Term gain for the attitude controller.
+  void setAttitudeGain(float gain) { attitudeGain_ = gain; }
+  /// @brief The P-Term gain for the attitude controller in the Z-Axis.
+  void setAttitudeZGain(float gain) { attitudeZGain_ = gain; }
+  /// @brief The I-Term gain for the attitude controller.
+  void setAttitudeIntegralGain(float gain) { attitudeIntegralGain_ = gain; }
+  /// @brief The I-Term gain for the attitude controller in the Z-Axis.
+  void setAttitudeIntegralZGain(float gain) { attitudeIntegralZGain_ = gain; }
+  /// @brief The P-Term gain for the attitude rate controller.
+  void setAttitudeRateGain(float gain) { attitudeRateGain_ = gain; }
+  /// @brief The P-Term gain for the attitude rate controller in the Z-Axis.
+  void setAttitudeRateZGain(float gain) { attitudeRateZGain_ = gain; }
 
-            /// @brief The P-Term gain for the attitude controller.
-            void setAttitudeGain(float gain) { attitudeGain_ = gain; }
-            /// @brief The P-Term gain for the attitude controller in the Z-Axis.
-            void setAttitudeZGain(float gain) { attitudeZGain_ = gain; }
-            /// @brief The I-Term gain for the attitude controller.
-            void setAttitudeIntegralGain(float gain) { attitudeIntegralGain_ = gain; }
-            /// @brief The I-Term gain for the attitude controller in the Z-Axis.
-            void setAttitudeIntegralZGain(float gain) { attitudeIntegralZGain_ = gain; }
-            /// @brief The P-Term gain for the attitude rate controller.
-            void setAttitudeRateGain(float gain) { attitudeRateGain_ = gain; }
-            /// @brief The P-Term gain for the attitude rate controller in the Z-Axis.
-            void setAttitudeRateZGain(float gain) { attitudeRateZGain_ = gain; }
+  /**
+   * * @brief Subsribes to a topic to which the attitude estimation is published
+   * in form: [W, Q], where W is the angular velocity vector and Q is a unit
+   * quaternion rotation from the reference frame to body frame.
+   */
+  void subscribeAttitudeMeasurement(
+      Core::Topic<Core::Timestamped<Math::Vector<float, 7>>> &attTopic);
 
-            /**
-             * * @brief Subsribes to a topic to which the attitude estimation is published in form: [W, Q], where W is the angular velocity vector and Q is a unit quaternion rotation from the reference frame to body frame.
-             */
-            void subscribeAttitudeMeasurement(Core::Topic<Core::Timestamped<Math::Vector<float, 7>>> &attTopic);
+  /**
+   * @brief Subsribes to a topic to which the acceleration setpoint is published
+   * in reference frame.
+   */
+  void subscribeAccelerationSetpoint(
+      Core::Topic<Math::Vector<float, 3>> &setpointTopic);
 
-            /**
-             * @brief Subsribes to a topic to which the acceleration setpoint is published in reference frame.
-             */
-            void subscribeAccelerationSetpoint(Core::Topic<Math::Vector<float, 3>> &setpointTopic);
+  /**
+   * @brief Subsribes to a topic to which the setpoint is published in form: [V,
+   * P], where V is the linear velocity vector and P is the position vector.
+   */
+  void
+  subscribeAttitudeSetpoint(Core::Topic<Math::Vector<float, 7>> &setpointTopic);
 
-            /**
-             * @brief Subsribes to a topic to which the setpoint is published in form: [V, P], where V is the linear velocity vector and P is the position vector.
-             */
-            void subscribeAttitudeSetpoint(Core::Topic<Math::Vector<float, 7>> &setpointTopic);
+  void unsubscribeAttitudeSetpoint() { stateSetpointSubr_.unsubscribe(); }
 
-            void unsubscribeAttitudeSetpoint()
-            {
-                stateSetpointSubr_.unsubscribe();
-            }
+  /**
+   * @brief Returns the topic to which the thrust vector control output is
+   * published. In form: [X, Y, Z, T], where X, Y, Z show the thrust vector in
+   * body frame (magnitude of vector is thrust magnitude) and T is the roll
+   * torque (Z-Axis) angle in radians.
+   */
+  Core::Topic<Math::Vector<float, 4>> &getTvcTopic();
 
-            /**
-             * @brief Returns the topic to which the thrust vector control output is published. In form: [X, Y, Z, T], where X, Y, Z show the thrust vector in body frame (magnitude of vector is thrust magnitude) and T is the roll torque (Z-Axis) angle in radians.
-             */
-            Core::Topic<Math::Vector<float, 4>> &getTvcTopic();
+  /**
+   * @brief Sets the attitude state setpoint. This overrides the current
+   * setpoint, but will be lost if the setpoint topic is not unsubscribed.
+   * @param attitudeState The attitude state setpoint in form: [W, Q], where W
+   * is the angular velocity vector and Q is a unit quaternion rotation from the
+   * reference frame to body frame.
+   */
+  void setAttitudeStateSetpoint(const Math::Vector<float, 7> &attitudeState) {
+    stateSetpointSubr_
+        .getItem(); // Clears the subscriber item in case is already received
+                    // new data but hasn't been processed yet. This would
+                    // immediately override the setpoint we just set.
+    stateSetpoint_ = attitudeState;
+  }
 
-            /**
-             * @brief Sets the attitude state setpoint. This overrides the current setpoint, but will be lost if the setpoint topic is not unsubscribed.
-             * @param attitudeState The attitude state setpoint in form: [W, Q], where W is the angular velocity vector and Q is a unit quaternion rotation from the reference frame to body frame.
-             */
-            void setAttitudeStateSetpoint(const Math::Vector<float, 7> &attitudeState)
-            {
-                stateSetpointSubr_.getItem(); // Clears the subscriber item in case is already received new data but hasn't been processed yet. This would immediately override the setpoint we just set.
-                stateSetpoint_ = attitudeState;
-            }
+  void enableControl(bool enable) { enableControl_ = enable; }
 
-            void enableControl(bool enable) { enableControl_ = enable; }
+  /**
+   * @brief if a TVC angle greater than the limit is needed, then the TVC thrust
+   * is increased to achieve the desired torque.
+   * @note this can cause runwaway if the required TVC angle is constantly
+   * greater than the limit.
+   */
+  void setTVCLimitCompensation(bool enable) { compensateTVCAngle_ = enable; }
 
-            /**
-             * @brief if a TVC angle greater than the limit is needed, then the TVC thrust is increased to achieve the desired torque.
-             * @note this can cause runwaway if the required TVC angle is constantly greater than the limit.
-             */
-            void setTVCLimitCompensation(bool enable) { compensateTVCAngle_ = enable; }
+  void taskCheck() override;
 
-            void taskCheck() override;
+  void taskInit() override;
 
-            void taskInit() override;
+  void taskThread() override;
+};
 
-            void taskThread() override;
-        };
-
-    }
-}
+} // namespace CTRL
+} // namespace VCTR
 
 #endif // EXVECTRCONTROL_SIMPLE_PID_HPP_
