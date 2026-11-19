@@ -67,7 +67,7 @@ void ControlAttitudeTvc::taskInit() {
     setInitialised(false);
   }
 
-  lastRunTimestamp_ = Core::NOW();
+  lastRunTimestamp_ = Core::NowNs();
   accelSetpoint_ = 0;
   integral_ = 0; // Reset the integral term for the attitude control
 }
@@ -114,8 +114,8 @@ void ControlAttitudeTvc::taskThread() {
    */
 
   // Calculate the the delta time difference between control runs
-  float dTime = double(Core::NOW() - lastRunTimestamp_) / Core::SECONDS;
-  lastRunTimestamp_ = Core::NOW();
+  float dTime = double(Core::NowNs() - lastRunTimestamp_) / Core::SECONDS;
+  lastRunTimestamp_ = Core::NowNs();
 
   // Retrieve the latest data from the subscribers
   Quat_F attitude = attSubr_.getItem().data.block<4, 1>(3, 0);

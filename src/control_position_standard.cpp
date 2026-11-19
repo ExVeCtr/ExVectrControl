@@ -60,7 +60,7 @@ void ControlPositionStandard::taskInit() {
     setInitialised(false);
   }
 
-  lastRunTimestamp_ = Core::NOW();
+  lastRunTimestamp_ = Core::NowNs();
 }
 
 void ControlPositionStandard::taskThread() {
@@ -105,8 +105,8 @@ void ControlPositionStandard::taskThread() {
    */
 
   // Calculate the the delta time difference between control runs
-  float dTime = double(Core::NOW() - lastRunTimestamp_) / Core::SECONDS;
-  lastRunTimestamp_ = Core::NOW();
+  float dTime = double(Core::NowNs() - lastRunTimestamp_) / Core::SECONDS;
+  lastRunTimestamp_ = Core::NowNs();
 
   // Retrieve the latest data from the subscribers
   auto position = posSubr_.getItem().data.block<3, 1>(3, 0);

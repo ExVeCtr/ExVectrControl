@@ -22,7 +22,7 @@ SimplePID::SimplePID(float kp, float ki, float kd, float maxOutput)
 
     setPoint_ = 0;
 
-    lastTime_ = Core::NOW();   
+    lastTime_ = Core::NowNs();   
 }
 
 void SimplePID::setSetPoint(float setPoint) {
