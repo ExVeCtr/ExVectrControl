@@ -101,6 +101,14 @@ public:
 
   void enableControl(bool enable) { enableControl_ = enable; }
 
+  /**
+   * @brief Clears the controller's internal state: the velocity integral, the delta-time reference and the
+   * setpoint tracking state. Until the next setpoint arrives the controller holds the latest measured position with
+   * zero velocity (instead of propagating an old setpoint). Gains and the enable flag are not changed. Call it
+   * whenever the controller is (re-)enabled or the flight phase changes.
+   */
+  void resetControlState();
+
   void taskCheck() override;
 
   void taskInit() override;

@@ -53,6 +53,15 @@ Core::Topic<Math::Vector<float, 3>> &ControlPositionStandard::getAccelTopic() {
 
 void ControlPositionStandard::taskCheck() {}
 
+void ControlPositionStandard::resetControlState() {
+  velCtrlIntegral_ = 0;
+  lastRunTimestamp_ = Core::NowNs();
+  // Hold the latest measured position with zero velocity until the next setpoint arrives. A setpoint published
+  // before the reset and not yet read is kept (it is newer than the hold).
+  auto measured = posSubr_.getItem().data;
+  stateSetpoint_ = {0, 0, 0, measured(3), measured(4), measured(5)};
+}
+
 void ControlPositionStandard::taskInit() {
 
   // Only run when all subscribers have gotten data at least once

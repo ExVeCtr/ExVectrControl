@@ -61,6 +61,11 @@ Core::Topic<Math::Vector<float, 4>> &ControlAttitudeTvc::getTvcTopic() {
 
 void ControlAttitudeTvc::taskCheck() {}
 
+void ControlAttitudeTvc::resetControlState() {
+  integral_ = 0;
+  lastRunTimestamp_ = Core::NowNs();
+}
+
 void ControlAttitudeTvc::taskInit() {
   // Only run when all subscribers have gotten data at least once
   if (!attSubr_.isDataNew() || !stateSetpointSubr_.isDataNew()) {

@@ -155,6 +155,14 @@ public:
   void enableControl(bool enable) { enableControl_ = enable; }
 
   /**
+   * @brief Clears the controller's internal state: the attitude integral and the delta-time reference (the next
+   * run uses a normal period instead of the time since the last run). Gains, setpoints and the enable flag are not
+   * changed. Call it whenever the controller is (re-)enabled or the flight phase changes, so no integral collected
+   * in an earlier phase is carried into the next one.
+   */
+  void resetControlState();
+
+  /**
    * @brief if a TVC angle greater than the limit is needed, then the TVC thrust
    * is increased to achieve the desired torque.
    * @note this can cause runwaway if the required TVC angle is constantly
