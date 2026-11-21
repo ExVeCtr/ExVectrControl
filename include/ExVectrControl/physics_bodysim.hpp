@@ -1,7 +1,6 @@
 #ifndef EXVECTRCONTROL_BODYSIM_HPP
 #define EXVECTRCONTROL_BODYSIM_HPP
 
-#include "ExVectrCore/timestamped.hpp"
 #include "ExVectrCore/time_definitions.hpp"
 
 #include "ExVectrMath.hpp"
@@ -14,7 +13,13 @@ namespace VCTR
     {
 
         /**
-         * @brief A class implementing a simple simulation for forces/torques on a fixed body.
+         * @brief Rigid-body integrator for forces/torques on a body (6 DOF).
+         *
+         * Integration (since 2026-11-21, feature/sim-aero): semi-implicit (symplectic) Euler. The force and torque
+         * sums of the step are held constant; first v and omega are advanced, then p with the new v and q with the
+         * new omega. The rotation uses the full Euler equation I*domega/dt = tau - omega x (I*omega) with the full
+         * inertia tensor (products of inertia allowed). Pure code (no scheduler, no wall clock): the caller chooses
+         * the step, so a fixed step gives bit-identical runs.
          */
         class PhysicsBodySim 
         {
@@ -31,6 +36,7 @@ namespace VCTR
 
             float mass_; // Mass of the body in kg
             Math::Matrix<float, 3, 3> inertiaTensor_; // Inertia tensor of the body in kg*m^2
+            Math::Matrix<float, 3, 3> inertiaInverse_; // Cached inverse of inertiaTensor_
 
 
         public:
@@ -65,7 +71,8 @@ namespace VCTR
             void clearForces(bool force = true, bool torque = true);
 
             void setMass(float mass) { mass_ = mass; } // Set the mass of the body in kg
-            void setInertiaTensor(const Math::Matrix<float, 3, 3>& inertiaTensor) { inertiaTensor_ = inertiaTensor; } // Set the inertia tensor of the body in kg*m^2
+            /// Sets the inertia tensor about the centre of mass in body axes, kg*m^2 (its inverse is cached).
+            void setInertiaTensor(const Math::Matrix<float, 3, 3>& inertiaTensor);
 
             /**
              * @brief Sets the position state [V, P] of the body in reference frame.
@@ -118,7 +125,13 @@ namespace VCTR
             float getMass() { return mass_; } // Get the mass of the body
 
 
-            void simulateForTime(int64_t time); // Simulate the body for a given time.
+            void simulateForTime(int64_t time); // Simulate the body for a given time (one step of time ns).
+
+            /**
+             * @brief Advances the state by one step of dt seconds with the current force and torque sums
+             * (semi-implicit Euler, see the class comment). dt <= 0 or non-finite does nothing.
+             */
+            void step(float dt);
 
 
         private:
