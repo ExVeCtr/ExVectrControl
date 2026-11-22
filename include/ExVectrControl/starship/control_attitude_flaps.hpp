@@ -1,6 +1,8 @@
 #ifndef EXVECTRCONTROL_CONTROLATTITUDEFLAPS_HPP
 #define EXVECTRCONTROL_CONTROLATTITUDEFLAPS_HPP
 
+#include "ExVectrControl/starship/flap_mode_mapper.hpp"
+#include "ExVectrControl/starship/flap_types.hpp"
 #include "ExVectrCore/task_types.hpp"
 #include "ExVectrCore/timestamped.hpp"
 #include "ExVectrCore/topic_subscribers.hpp"
@@ -9,40 +11,6 @@
 
 namespace VCTR {
 namespace CTRL {
-
-struct ControlAttitudeFlapSetting {
-  float flapTLAngle_Rad = 0;  // Flap angle in radians.
-  float flapTRAngle_Rad = 0;  // Flap angle in radians.
-  float flapBLAngle_Rad = 0;  // Flap angle in radians.
-  float flapBRAngle_Rad = 0;  // Flap angle in radians.
-
-  bool enableFlaps = false;  // Enable or disable the flap actuators
-};
-
-struct ControlAttitudeBellyFlopSetting {
-  float azimuthAngle_Rad =
-      0;  // In what respect to north the vehicle should point to.
-  float pitchAngle_Rad =
-      0;  // What angle to pitch the vehicle to in respect to the Body Y Axis.
-  float rollAngle_Rad =
-      0;  // What angle to roll the vehicle to in respect to the Body X Axis.
-
-  bool extentFlapsOnAscent =
-      false;  // If true, the flaps are fully extended in ascent mode. If false,
-              // the flaps are fully retracted.
-
-  enum class BellyFlopMode : uint8_t {
-    BellyFlopMode_Acsent,     // Flaps are disabled and depending on the bool,
-                              // either fully restracted or fully extended.
-    BellyFlopMode_Stabilize,  // Stabilize the vehicle in belly flop mode.
-                              // (Attempts to reach the given angles)
-    BellyFlopMode_Upright,    // Help to upright the vehicle. (Top flaps are
-                              // extended, bottom flaps are retracted)
-  };
-
-  BellyFlopMode bellyFlopMode =
-      BellyFlopMode::BellyFlopMode_Acsent;  // The current belly flop mode.
-};
 
 /**
  * @brief Simple one dimensional PID controller.
@@ -75,26 +43,10 @@ class ControlAttitudeFlaps : public Core::Task_Periodic {
   // Output topic for the flap settings.
   Core::Topic_Publisher<ControlAttitudeFlapSetting> flapOutputTopic_;
 
-  // Control parameters
-  float flapTopNeutralAngle_Rad_ =
-      50 * DEGREES;  // Neutral angle for the top flaps in radians.
-  float flapBottomNeutralAngle_Rad_ =
-      40 * DEGREES;  // Neutral angle for the bottom flaps in radians.
-
-  float enableThresX_ = 0.1f;  // Control will enable if the velocity in Body X
-                               // direction is above this threshold.
-  float enableThresAngle_Rad_ =
-      35 * DEGREES;  // Control will enable if the belly down angle is within
-                     // this threshold.
-
-  float attitudeAzimuGain_ = 0.3;  // Attitude in azimuth control gain.
-  float attitudePitchGain_ = 1.2;  // Attitude in pitch control gain.
-  float attitudeRateXGain_ = 0.2;  // Attitude rate control gain.
-  float attitudeRateYGain_ = 0.4;  // Attitude rate control gain.
-  float attitudeRateZGain_ = 0.1;  // Attitude rate control gain.
-
-  float attitudeAzimuLimit_Perc_ =
-      0.5;  // Limit for the Azimuth/yaw output in percent of the maximum angle.
+  // Control parameters: legacy Stabilize law (neutral 50/40 deg) and the Descent law (neutral 30/78 deg).
+  FlapStabilizeParams stabilizeParams_;
+  descent::FlapDescentLawParams descentParams_;
+  descent::FlapDescentLawMem descentMem_;
 
  public:
   /**
@@ -103,11 +55,11 @@ class ControlAttitudeFlaps : public Core::Task_Periodic {
   ControlAttitudeFlaps();
 
   /// @brief The P-Term gain for the attitude rate controller.
-  void setAttitudeRateXGain(float gain) { attitudeRateXGain_ = gain; }
+  void setAttitudeRateXGain(float gain) { stabilizeParams_.attitudeRateXGain = gain; }
   /// @brief The P-Term gain for the attitude rate controller.
-  void setAttitudeRateYGain(float gain) { attitudeRateYGain_ = gain; }
+  void setAttitudeRateYGain(float gain) { stabilizeParams_.attitudeRateYGain = gain; }
   /// @brief The P-Term gain for the attitude rate controller.
-  void setAttitudeRateZGain(float gain) { attitudeRateZGain_ = gain; }
+  void setAttitudeRateZGain(float gain) { stabilizeParams_.attitudeRateZGain = gain; }
 
   /**
    * * @brief Subsribes to a topic to which the attitude estimation is published
@@ -156,4 +108,4 @@ class ControlAttitudeFlaps : public Core::Task_Periodic {
 }  // namespace CTRL
 }  // namespace VCTR
 
-#endif
+#endif
