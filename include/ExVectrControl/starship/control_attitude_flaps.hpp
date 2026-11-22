@@ -1,6 +1,7 @@
 #ifndef EXVECTRCONTROL_CONTROLATTITUDEFLAPS_HPP
 #define EXVECTRCONTROL_CONTROLATTITUDEFLAPS_HPP
 
+#include "ExVectrControl/starship/descent_flap_controller.hpp"
 #include "ExVectrControl/starship/flap_mode_mapper.hpp"
 #include "ExVectrControl/starship/flap_types.hpp"
 #include "ExVectrCore/task_types.hpp"
@@ -48,6 +49,12 @@ class ControlAttitudeFlaps : public Core::Task_Periodic {
   descent::FlapDescentLawParams descentParams_;
   descent::FlapDescentLawMem descentMem_;
 
+  // Descent guidance (runs in this 50 Hz task): target from a small setting topic, state in descentCtrl_.
+  Core::Simple_Subscriber<descent::DescentTarget> descentTargetSubr_;
+  descent::DescentTarget descentTarget_;
+  descent::DescentFlapController descentCtrl_;
+  int64_t lastRunNs_ = 0;
+
  public:
   /**
    * @brief Constructor for the ControlRocket class.
@@ -89,6 +96,15 @@ class ControlAttitudeFlaps : public Core::Task_Periodic {
     controlSetting_.subscribe(controlSettingTopic);
   }
 
+  /// Topic of the DescentTarget (published by the mission side at 10 Hz). Without it the target stays invalid (zero
+  /// glide, straight fall).
+  void subscribeDescentTarget(Core::Topic<descent::DescentTarget>& targetTopic) {
+    descentTargetSubr_.subscribe(targetTopic);
+  }
+
+  /// Guidance output for telemetry (heading setpoint, split); inactive outside the Descent mode.
+  const descent::DescentStatus& getDescentStatus() const { return descentCtrl_.status(); }
+
   /**
    * @brief Uses the given topic to publish the flap settings for this
    * controllers output.
@@ -108,4 +124,4 @@ class ControlAttitudeFlaps : public Core::Task_Periodic {
 }  // namespace CTRL
 }  // namespace VCTR
 
-#endif
+#endif
