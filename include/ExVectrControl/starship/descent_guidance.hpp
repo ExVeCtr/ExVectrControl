@@ -123,9 +123,9 @@ class DescentGuidance {
                           std::isfinite(t.endAltitude_m) && dtOk;
     if (dtOk)
       m.elapsed_s += dt;
-    if (!t.valid || !inputsOk || m.elapsed_s < p.entryHold_s) { // no target or invalid input: hold heading, zero glide
+    if (!t.valid || !inputsOk) { // no target or invalid input: hold heading, zero glide
       o.headingSp_rad = m.headingSp;
-      const float hold = (inputsOk && t.valid) ? p.entrySplit_rad : 0.0f; // 0 = neutral 30/78, vertical fall
+      const float hold = 0.0f; // 0 = neutral 30/78, vertical fall
       m.split = slew(m.split, hold, p.splitRate_radps * (dtOk ? dt : 0));
       o.pitchSplit_rad = m.split;
       return o;
@@ -153,6 +153,15 @@ class DescentGuidance {
       if (!p.forwardOnlyHeading && fabsf(wrapPi(h - b.heading)) > 0.5f * kPi)
         h = wrapPi(h + kPi);
       m.headingSp = h;
+    }
+    // 3b. Entry hold (flaps deploy from the kick): the heading setpoint already steers towards the target (the
+    //     guidance is active from the first tick, at any altitude), but the pitch split stays at the entry split, no
+    //     glide command and no wind integration yet.
+    if (m.elapsed_s < p.entryHold_s) {
+      o.headingSp_rad = m.headingSp;
+      m.split = slew(m.split, p.entrySplit_rad, p.splitRate_radps * dt);
+      o.pitchSplit_rad = m.split;
+      return o;
     }
     // 4. Glide command = projection of the air-velocity command on the measured nose direction.
     const float nx = cosf(b.heading), ny = sinf(b.heading);
